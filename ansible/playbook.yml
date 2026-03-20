@@ -1,0 +1,210 @@
+---
+#===========================================
+#Play 1 : Preparing all nodes for kubernetes
+#===========================================
+
+- name: Prepare all nodes
+  hosts: all
+  become: true
+  gather_facts: true
+
+  handlers:
+    - name: reload sysctl
+      command: sysctl --system
+
+  
+   
+  tasks:
+     - name: Update apt package cache
+       apt:
+         update_cache: true
+         cache_valid_time: 3600
+     - name: Upgrade apt package cache
+       apt:
+         upgrade: dist
+         autoremove: true
+     - name: Install required packages
+       apt:
+         name:
+           - curl
+           - wget
+           - git
+           - jq
+           - apt-transport-https
+           - ca-certificates
+           - gnupg
+           - python3-pip
+           - fail2ban
+           - unattended-upgrades
+         state: present
+     - name: COnfigure unattended security uattended-upgrades
+       copy:
+         dest: /etc/apt/apt.conf.d/20auto-upgrades
+         content: |
+           APT::Periodic::Update-Package-Lists "1";
+           APT::Periodic::Unattended-Upgrade "1";
+           APT::Periodic::AutocleanInterval "7";
+     - name: Disable swap immediately
+       command: swapoff -a
+       changed_when: false
+     - name: Remove swap from /etc/fstab permanently
+       replace:
+         path: /etc/fstab
+         regexp: '^([^#].*\s+swap\s+.*)$'
+         replace: '# \1'
+     - name: Load overlay kernel module
+       modprobe:
+          name: overlay
+          state: present
+     - name: Load br_netfilter module
+       modprobe:
+          name: br_netfilter
+          state: present
+     - name: Persist kernel module across reboots
+       copy:
+         dest: /etc/modules-load.d/k8s.conf
+         content: |
+            overlay
+            br_netfilter
+     - name: Set kernel networking parameters for kubernetes
+       copy:
+         dest: /etc/sysctl.d/99-kubernetes.conf
+         content: |
+            net.ipv4.ip_forward = 1
+            net.bridge.bridge-nf-call-iptables = 1
+            net.bridge.bridge-nf-call-ip6tables = 1
+
+            net.ipv4.conf.all.rp_filter = 1
+            net.ipv4.conf.default.rp_filter = 1
+            net.ipv4.conf.all.accept_redirects = 0
+            net.ipv4.default.accept_redirects = 0
+            net.ipv4.conf.all.send_redirects = 0
+       notify: reload sysctl
+    
+     - name: Apply sysctl setting immedtialy
+       command: sysctl --system
+       changed_when: false
+
+     - name: Allow ssh
+       ufw: 
+         rule: allow
+         port: "22"
+         proto: tcp
+     - name: Allow HTTP (Let's encrypt acme)
+       ufw:
+         rule: allow
+         port: "80"
+         proto: tcp
+     - name: Allow HTTPS
+       ufw:
+         rule: allow
+         port: "443"
+         proto: tcp
+     - name: Allow k3s API server (Internal VPC Only)
+       ufw:
+         rule: allow
+         port: "6443"
+         proto: tcp
+         src: "10.0.0.0/16"
+     - name: Allow Kubelet (internal VPC Only)
+       ufw:
+         rule: allow
+         port: "10250"
+         proto: tcp
+         src: "10.0.0.0/16"
+     - name: Allow Flannel VXLAN (internal VPC Only)
+       ufw:
+         rule: allow
+         port: "8472"
+         proto: udp
+         src: "10.0.0.0/16"
+     - name: Enable UFW with default deny
+       ufw:
+         state: enabled
+         policy: deny
+         logging: "on"
+
+#======================================================
+#=============== Play 2: Install K3s Control Plane ====
+#======================================================
+
+- name: Install k3s control Plane
+  hosts: control_plane
+  become: true
+
+
+  tasks:
+   - name: Install k3s server
+     shell: |
+        curl -sfL https://get.k3s.io | sh -s server \
+          --cluster-init \
+          --disable traefik \
+          --disable servicelb \
+          --write-kubeconfig-mode 644 \
+          --node-name control-0 \
+          --kube-apiserver-arg="--audit-log-path=/var/log/k3s-audit.log" \
+          --kube-apiserver-arg="--audit-log-maxage=7"
+        args:
+          creates: /usr/local/bin/k3s
+   - name: Wait for k3s node-token to be written
+     wait_for:
+        path: /var/lib/rancher/k3s/server/node-token
+        state: present
+        timeout: 180
+   - name: Wait for k3s api to be ready
+     wait_for:
+        port: 6443
+        host: "{{ansible_host}}"
+        timeout: 180
+
+   - name: Verify all system pods are running
+     command: kubectl get pods -n kube-system
+     register: pods
+     changed_when: false
+     retries: 10
+     delay: 10
+     until: pods.rc == 0
+   - name: Fetch node-token to local machine
+     fetch:
+       src: /var/lib/rancher/k3s/server/node-token
+       dest: /tmp/k3s-node-token
+       flat: true
+   - name: Fetch Kubeconfig to local machine
+     fetch:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: /tmp/k3s.yaml
+        flat: true
+
+
+#=======================================================
+#=============== Play 3 : Joining Worker Nodes =========
+#=======================================================
+
+- name: Join worker nodes
+  hosts: workers
+  become: true
+
+  vars:
+    k3s_url: "https://{{hostvars[groups['control_plane'][0]]['ansible_host']}}:6443"
+    k3s_token: "{{ lookup('file','/tmp/k3s-node-token') }}"
+
+
+  tasks:
+    - name: Join worker to k3s cluster
+      shell: |
+        curl -sfL https://get.k3s.io | \
+          K3S_URL="{{ k3s_url  }}" \
+          K3S_TOKEN="{{ k3s_token  }}" \
+          sh -s - agent \
+          --node-name worker-{{ ansible_play_hosts.index(inventory_hostname) + 1  }}
+
+      args:
+        creates: /usr/local/bin/k3s-agent
+    - name: Make sure k3s-agent service is enables and started
+      service:
+        name: k3s-agent
+        state: started
+        enabled: true
+
+        
+

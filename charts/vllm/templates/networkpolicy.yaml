@@ -1,0 +1,88 @@
+{{- if .Values.networkPolicy.enabled }}
+#Default Deny all ingress and egress in lmm namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+    name: default-deny-all
+    namespace: {{ .Relase.Namespace }}
+
+spec: 
+    podSelector: {}
+    policyTypes:
+    - Ingress
+    - Egress
+
+
+#Allowing only nginx ingress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+    name: allow-ingress-to-vllm
+    namespace: {{ .Relase.Namespace }}
+
+spec:
+    podSelector:
+        matchLabels:
+            app: vllm
+    policyTypes:
+    - ingress
+    ingress:
+    - from:
+      - namespaceSelector:
+            matchLabels:
+                kubernetes.io/metadata.name: ingress-nginx
+      ports:
+      - protocol: TCP
+        port: 8000
+
+#Allow vllm pods to make calls to external API and internal svc
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+    name: allow-vllm-egress
+    namespace: {{ .Relase.Namespace }}
+spec:
+    podSelector:
+        matchLabels:
+            app: vllm
+    policyTypes:
+    - Egress
+    egress:
+    - ports:
+      - port: 443
+        protocol: TCP
+      - port: 80
+        protocol: TCP
+      - port: 53
+        protocol: UDP
+
+    - to:
+      - namespaceSelector:
+            matchLabels:
+                kubernetes.io/metadata.name: vault
+      ports:
+      - port: 8200
+        protocol: TCP
+
+#Allow prometheus to scrape vllm metrics
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+    name: allow-prometheus-scrape
+    namespace: {{ .Relase.Namespace }}
+spec:
+    podSelector:
+        matchLabels:
+            app: vllm
+    policyTypes:
+    - ingress
+    ingress:
+    - from:
+      - namespaceSelector:
+            matchLabels:
+                kubernetes.io/metadata.name: monitoring
+      ports:
+      - protocol: TCP
+        port: 8000
+
+{{- end }}

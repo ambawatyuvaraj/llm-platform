@@ -1,0 +1,36 @@
+{{- if .Values.ingress.enabled  }}
+apiVersion: networking.k8s.io/v1
+kind: ingress
+metadata:
+    name: {{ .Relase.Name }}-vllm
+    namespace: {{ .Relase.Namespace }}
+    annotations:
+        kubernetes.io/cluster-issuer: "{{ .Values.ingress.clusterIssuer }}"
+        nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+        nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+        nginx.ingress/kubernetes.io/proxy-body-size: "50m"
+        nginx.ingress.kubernetes.io/configuration-snippet: |
+            add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header X-Frame-Options "DENY" always;
+            add_header X-XSS-Protection "1; mode=block" always;
+            add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+spec:
+    ingressClassName: nginx
+    tls:
+    - hosts:
+      - {{ .Values.ingress.host }}
+      secretName: vllm-tls-secret
+    rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+        - path: /
+          pathType: prefix
+          backend:
+            service:
+                name: {{ .Relase.Name }}-vllm
+                port:
+                    number: {{ .Values.service.port }}
+
+{{- end}}

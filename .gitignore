@@ -1,0 +1,36 @@
+# Terraform
+.terraform/
+#.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# Secrets
+*.pem
+*.key
+.env
+secrets/
+
+# Kubernetes
+kubeconfig
+vault-token
+vault-init.json
+vault-unseal-key
+.vault-root-token
+.argocd-password
+.grafana-password
+.argo-token
+vault-values.yaml
+mlflow-values.yaml
+.postgres-password
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+.idea/
+.vscode/
+.argocd-password

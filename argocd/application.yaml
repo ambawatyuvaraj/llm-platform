@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: application
+metadata:
+  name: vllm-platform
+  namespace: argocd
+  finalizers:
+    - resourcers-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ambawatyuvaraj/llm-platform
+    targetRevision: main
+    path: charts/vllm
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: llm-serving
+  syncPolicy:
+    automated:
+      prune: true
+      seflHeal: true
+    syncOptions:
+      - CreateNamespace = true
+      - ServerSideApply = true

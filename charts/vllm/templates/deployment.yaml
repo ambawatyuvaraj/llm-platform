@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+   name: {{ .Relase.Name }}-vllm
+   namespace: {{ .Relase.Namespace }}
+   labels:
+     app: vllm
+     version: "{{ .Values.image.tag }}"
+
+spec:
+   replicas: {{ .Values.replicaCount }}
+   strategy:
+     type: RollingUpdate
+     rollingUpdate:
+        maxUnavailable: 0
+        maxSurge: 1
+   selector: 
+      matchLabels:
+        app: vllm
+   template:
+       metadata:
+         labels:
+            app: vllm
+            version: "{{ .Values.image.tag }}"
+         annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "8000"
+            prometheus.io/path: "/metrics"
+            checksum/config: {{ .Values | toJson | sha256sum }}
+       spec:
+         serviceAccountName: vllma-sa
+         securityContext: 
+            runAsNonRoot: true
+            runAsUser: {{ .Values.securityContext.runAsUser }}
+            runAsGroup: {{ .Values.securityContext.runAsGroup }}
+            fsGroup: {{ .Values.securityContext.runAsGroup }}
+            seccompProfile:
+               type: RuntimeDefault
+            terminationGracePeriodSeconds: 60
+            containers:
+            - name: vllm
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            args:
+              - "--model"
+              - "{{ .Values.mode.name }}"
+              - "--served-model-name"
+              - "{{ .Values.model.servedName }}"
+              - "--device"
+              - "{{ .Values.model.device }}"
+              - "--dtype"
+              - "{{ .Values.model.dtype }}"
+              - "--port"
+              - "8000"
+              - "--host"
+              - "0.0.0.0"
+              - "--max-model-len"
+              - "2048"
+           #container level security context
+           securityContext:
+             allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+             readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+             capabilities:
+               drop: {{ .Values.securityContext.capabilities.drop | toJson }}
+
+             ports: 
+              - containerPort: 8000
+                name: http
+                protocol: tcp
+            resources:
+                requests:
+                   memory: "{{ .Values.resources.requests.memory }}"
+                   cpu: "{{ .Values.resources.requests.cpu }}"
+
+                limits:
+                  memory: "{{ .Values.resources.limits.memory }}"
+                  cpu: "{{ .Values.resources.limits.cpu }}"
+            readinessProbe:
+                httpGet:
+                  path: /health
+                  port: 8000
+                initialDelaySeconds: 120
+                periodSeconds: 15
+                failureThreshold: 10
+                timeoutSeconds: 5
+            livenessProbe:
+                httpGet: 
+                  path: /health
+                  port: 8000
+                initialDelaySeconds: 180
+                periodSeconds: 30
+                failureThreshold: 3
+                timeoutSeconds: 5
+            startupProbe:
+                httpGet: 
+                    path: /health
+                    port: 8000
+                failureThreshold: 30
+                periodSeconds: 10
+            volumeMounts: 
+            - name: model-cache
+              mountPath: /root/.cache/huggingface
+            - name: tmp
+              mountPath: /tmp
+        volumes:
+        - name: model-cache
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

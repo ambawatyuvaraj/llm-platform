@@ -1,0 +1,51 @@
+replicaCount: 1
+
+image: 
+   repository: vllm/vllm-openai
+   tag: "v0.4.2"
+   pullPolicy: ifNotPresent
+
+model: 
+  name: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+  serverName: "llm"
+  device: cpu
+  dtype: float32
+
+resources:
+  requests:
+     memory: "3Gi"
+     cpu: "1000m"
+  limits:
+     memory: "3800Mi"
+     cpu: "2000m"
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+     drop:
+       - ALL
+
+service:
+   type: ClusterIP
+   port: 8000
+
+ingress:
+   enabled: true
+   host: "llm-platform.duckdns.org"
+   clusterIssuer: "lesencrypt-prod"
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+
+networkPolicy:
+   enabled: true
+
+promethesuRule: 
+  enabled: true
