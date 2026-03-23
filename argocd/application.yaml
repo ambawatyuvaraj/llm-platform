@@ -20,7 +20,7 @@ spec:
   syncPolicy:
     automated:
       prune: true
-      seflHeal: true
+      sefHeal: true
     syncOptions:
       - CreateNamespace = true
       - ServerSideApply = true
