@@ -7,7 +7,7 @@ variable "aws_region" {
 }
 
 variable "instance_type" {
-  default     = "t3.medium"
+  default     = "t3.large"
   description = "EC2 Instance type - t3.medium (2vCPU/4GB)"
   type        = string
 

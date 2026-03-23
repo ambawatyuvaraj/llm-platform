@@ -4,7 +4,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
     name: default-deny-all
-    namespace: {{ .Relase.Namespace }}
+    namespace: {{ .Release.Namespace }}
 
 spec: 
     podSelector: {}
@@ -18,14 +18,14 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
     name: allow-ingress-to-vllm
-    namespace: {{ .Relase.Namespace }}
+    namespace: {{ .Release.Namespace }}
 
 spec:
     podSelector:
         matchLabels:
             app: vllm
     policyTypes:
-    - ingress
+    - Ingress
     ingress:
     - from:
       - namespaceSelector:
@@ -33,14 +33,14 @@ spec:
                 kubernetes.io/metadata.name: ingress-nginx
       ports:
       - protocol: TCP
-        port: 8000
+        port: 11434
 
 #Allow vllm pods to make calls to external API and internal svc
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
     name: allow-vllm-egress
-    namespace: {{ .Relase.Namespace }}
+    namespace: {{ .Release.Namespace }}
 spec:
     podSelector:
         matchLabels:
@@ -69,13 +69,13 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
     name: allow-prometheus-scrape
-    namespace: {{ .Relase.Namespace }}
+    namespace: {{ .Release.Namespace }}
 spec:
     podSelector:
         matchLabels:
             app: vllm
     policyTypes:
-    - ingress
+    - Ingress
     ingress:
     - from:
       - namespaceSelector:
@@ -83,6 +83,6 @@ spec:
                 kubernetes.io/metadata.name: monitoring
       ports:
       - protocol: TCP
-        port: 8000
+        port: 11434
 
 {{- end }}

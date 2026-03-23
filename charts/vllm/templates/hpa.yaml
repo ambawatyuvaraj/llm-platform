@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-    name: {{ .Relase.Name }}-vllm
-    namespace: {{ .Relase.Namespace }}
+    name: {{ .Release.Name }}-vllm
+    namespace: {{ .Release.Namespace }}
 
 spec:
     scaleTargetRef:
         apiVersion: apps/v1
         kind: Deployment
-        name: {{ .Relase.Name }}-vllm
+        name: {{ .Release.Name }}-vllm
     minReplicas: {{ .Values.hpa.minReplicas }}
     maxReplicas: {{ .Values.hpa.maxReplicas }}
     metrics:

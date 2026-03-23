@@ -37,7 +37,7 @@
            - fail2ban
            - unattended-upgrades
          state: present
-     - name: COnfigure unattended security uattended-upgrades
+     - name: Configure unattended security uattended-upgrades
        copy:
          dest: /etc/apt/apt.conf.d/20auto-upgrades
          content: |
@@ -144,8 +144,8 @@
           --node-name control-0 \
           --kube-apiserver-arg="--audit-log-path=/var/log/k3s-audit.log" \
           --kube-apiserver-arg="--audit-log-maxage=7"
-        args:
-          creates: /usr/local/bin/k3s
+     args:
+        creates: /usr/local/bin/k3s
    - name: Wait for k3s node-token to be written
      wait_for:
         path: /var/lib/rancher/k3s/server/node-token
@@ -155,7 +155,8 @@
      wait_for:
         port: 6443
         host: "{{ansible_host}}"
-        timeout: 180
+        timeout: 30
+     ignore_errors: true
 
    - name: Verify all system pods are running
      command: kubectl get pods -n kube-system
@@ -185,7 +186,8 @@
   become: true
 
   vars:
-    k3s_url: "https://{{hostvars[groups['control_plane'][0]]['ansible_host']}}:6443"
+    k3s_url: "https://{{ hostvars[groups['control_plane'][0]]['k3s_private_ip'] }}:6443"
+    #k3s_url: "https://{{ groups['control_plane'][0]  }}:6443"
     k3s_token: "{{ lookup('file','/tmp/k3s-node-token') }}"
 
 

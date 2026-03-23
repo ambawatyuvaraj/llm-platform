@@ -1,23 +1,22 @@
 replicaCount: 1
 
-image: 
-   repository: vllm/vllm-openai
-   tag: "v0.4.2"
-   pullPolicy: ifNotPresent
+image:
+  repository: ollama/ollama
+  tag: "0.3.12"
+  pullPolicy: IfNotPresent
 
-model: 
-  name: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-  serverName: "llm"
-  device: cpu
-  dtype: float32
+model:
+  name: "tinyllama"
+  servedName: "llm"
+  swapSpace: 0
 
 resources:
   requests:
-     memory: "3Gi"
-     cpu: "1000m"
+    memory: "1Gi"
+    cpu: "500m"
   limits:
-     memory: "3800Mi"
-     cpu: "2000m"
+    memory: "3Gi"
+    cpu: "2000m"
 
 securityContext:
   runAsNonRoot: true
@@ -31,12 +30,12 @@ securityContext:
 
 service:
    type: ClusterIP
-   port: 8000
+   port: 11434
 
 ingress:
    enabled: true
    host: "llm-platform.duckdns.org"
-   clusterIssuer: "lesencrypt-prod"
+   clusterIssuer: "letsencrypt-prod"
 
 hpa:
   enabled: true
@@ -45,7 +44,15 @@ hpa:
   targetCPUUtilizationPercentage: 70
 
 networkPolicy:
-   enabled: true
+   enabled: false
 
-promethesuRule: 
-  enabled: true
+prometheusRule: 
+  enabled: false
+
+
+
+env:
+  - name: OLLAMA_MODELS
+    value: "/tmp/models"
+  - name: HOME
+    value: "/tmp"

@@ -5,7 +5,7 @@ resource "aws_iam_role" "vault_kms" {
 
     Version = "2012-10-17"
     Statement = [{
-      Effect    = "ALlow"
+      Effect    = "Allow"
       Principal = { Service = "ec2.amazonaws.com" }
       Action    = "sts:AssumeRole"
     }]
@@ -29,7 +29,7 @@ resource "aws_iam_role_policy" "vault_kms" {
       Sid      = "VaultKMSUnseal"
       Effect   = "Allow"
       Action   = ["kms:Encrypt", "kms:Decrypt", "kms:DescribeKey"]
-      Resrouce = aws_kms_key.vault_unseal.arn
+      Resource = aws_kms_key.vault_unseal.arn
     }]
   })
 

@@ -4,9 +4,9 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
     name: vllm-slo-alerts
-    namespace: {{ .Relase.Namespace }}
+    namespace: {{ .Release.Namespace }}
     labels:
-        relase: kube-prometheus-stack
+        release: kube-prometheus-stack
 spec:
     groups:
     - name: vllm.slo
@@ -17,27 +17,27 @@ spec:
             histogram_quantile(0.95,rate(vllm:e2e_request_latency_seconds_bucket[5m])) > 15
         for: 5m
         labels:
-            serverity: warning
+            severity: warning
             team: platform
         annotations:
-            summary: "vLLM P95 latency {{ $value | humanizeDuration }} exceeds 15s  SLO"
+            summary: "vLLM P95 latency {{ "{{" }} $value | humanizeDuration {{ "}}" }} exceeds 15s  SLO"
             runbook: "https://github.com/ambawatyuvaraj/llm-platform/wiki/runbooks"
-        - alert: LLMRequestQueueBacklog
-          expr: vllm:num_requests_waiting > 15
-          for: 2m
-          labels:
+      - alert: LLMRequestQueueBacklog
+        expr: vllm:num_requests_waiting > 15
+        for: 2m
+        labels:
             severity: critical
             team: platform
-          annotations:
-            summary: "{{ $value }} requests queued - scale up or investigate"
-        - alert:
-          expr: | 
+        annotations:
+            summary: "{{ "{{" }} $value {{ "}}" }} requests queued - scale up or investigate"
+      - alert: LLMPodCrashLooping
+        expr: | 
             rate(kube_pod_container_status_restarts_total{namespace="{{ .Release.Namespace }}"}[5m]) > 0
-          for: 1m
-          labels:
+        for: 1m
+        labels:
             severity: critical
             team: platform
-          annotations:
-            summary: "vLLM pod {{ $labels.pod }} is crash-looping"
+        annotations:
+            summary: "vLLM pod {{ "{{" }} $labels.pod {{ "}}" }} is crash-looping"
 
 {{- end}}
