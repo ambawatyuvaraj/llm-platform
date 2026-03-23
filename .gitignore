@@ -35,3 +35,4 @@ __pycache__/
 .vscode/
 .argocd-password
 .argocd-password
+inventory.ini
