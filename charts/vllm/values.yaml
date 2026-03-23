@@ -47,7 +47,7 @@ networkPolicy:
    enabled: false
 
 prometheusRule: 
-  enabled: false
+  enabled: true
 
 
 
