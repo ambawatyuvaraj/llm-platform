@@ -12,6 +12,7 @@ spec:
     targetRevision: main
     path: charts/vllm
     helm:
+      releaseName: vllm
       valueFiles:
         - values.yaml
   destination:
