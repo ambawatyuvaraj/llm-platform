@@ -75,6 +75,7 @@ spec:
           runAsUser: 1000
           runAsGroup: 1000
           allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
       containers:
       - name: vllm
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
