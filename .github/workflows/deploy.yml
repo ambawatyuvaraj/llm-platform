@@ -1,5 +1,4 @@
-name: CI/CD For LLM PLATFORM
-
+name: CI/CD — LLM Platform
 
 on:
   push:
@@ -18,34 +17,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: azure/setup-helm@b9e51907a09c216f16ebe1d4480728a6f928c494
-        with:
-          version: "3.14.0"
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+      - run: helm lint charts/vllm/
       - run: |
-          helm template vllm charts/vllm \
+          helm template vllm charts/vllm/ \
             --set ingress.host=test.duckdns.org \
             | kubectl apply --dry-run=client -f -
-    
+
   security:
-      name: Trivy security scan
-      runs-on: ubuntu-latest
-      needs: lint
-      steps:
-        - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        - uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa7cce1229c54b2c9bd0d8
-          with:
-            scan-type: config
-            scan-ref: charts/
-            severity: HIGH,CRITICAL
-            exit-code: 1
-            formart: sarif
-            output: trivy-results.sarif
-        - if: always()
-          uses: github/codeq1-action/upload-sarif@4fa2a7953630fd2f3fb380f21be14ede0169dd4f
-          with:
-            sarif_file: trivy-results.sarif
+    name: Trivy Security Scan
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8
+        with:
+          scan-type: config
+          scan-ref: charts/
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          format: sarif
+          output: trivy-results.sarif
+      - if: always()
+        uses: github/codeql-action/upload-sarif@4fa2a7953630fd2f3fb380f21be14ede0169dd4f
+        with:
+          sarif_file: trivy-results.sarif
+
   deploy:
-    name: Update Image tag
+    name: Update Image Tag
     runs-on: ubuntu-latest
     needs: security
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -54,17 +56,16 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update image tag in values.yaml
-        run: | 
-          SHORT_SHA="${GITHUB_SHA::8}"
-          sed -i "/^image:/,/^[^ ]/ s/^ tag:.*/ tag: \"${SHORT_SHA}\"/" \
-            charts/vllm/values.yaml
-          echo "updated tag to: $SHORT_SHA"
-      - name: commit and push updates
         run: |
-          git config user.name "github-actions[bot]"
+          SHORT_SHA="${GITHUB_SHA::8}"
+          sed -i "/^image:/,/^[^ ]/ s/^  tag:.*/  tag: \"${SHORT_SHA}\"/" \
+            charts/vllm/values.yaml
+          echo "Updated tag to: $SHORT_SHA"
+      - name: Commit and push manifest update
+        run: |
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add charts/vllm/values.yaml
           git diff --staged --quiet || \
-            git commit -m "ci: update image tag to ${GITHUB_SHA::8} {skip ci}"
+            git commit -m "ci: update image tag to ${GITHUB_SHA::8} [skip ci]"
           git push
-
