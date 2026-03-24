@@ -36,3 +36,5 @@ __pycache__/
 .argocd-password
 .argocd-password
 inventory.ini
+vault-values.yaml
+vault-init.json
