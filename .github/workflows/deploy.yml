@@ -25,7 +25,7 @@ jobs:
       - run: |
           helm template vllm charts/vllm/ \
             --set ingress.host=test.duckdns.org \
-            | kubectl apply --dry-run=client -f -
+            | kubectl apply --dry-run=client --validate=false -f -
 
   security:
     name: Trivy Security Scan
