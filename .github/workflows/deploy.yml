@@ -39,18 +39,18 @@ jobs:
 
       - name: Render Helm templates
         run: |
-          mkdir -p /tmp/rendered
+          mkdir -p rendered
           helm template vllm charts/vllm/ \
             --set ingress.host=test.duckdns.org \
             --set prometheusRule.enabled=false \
             --set networkPolicy.enabled=false \
-            > /tmp/rendered/manifests.yaml
+            > rendered/manifests.yaml
 
       - name: Trivy scan rendered manifests
         uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8
         with:
           scan-type: config
-          scan-ref: /tmp/rendered/
+          scan-ref: rendered/
           severity: HIGH,CRITICAL
           exit-code: 1
           format: sarif
