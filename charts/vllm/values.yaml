@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ollama/ollama
-  tag: "a2737f59"
+  tag: "aa8f1792"
   pullPolicy: IfNotPresent
 
 model:
