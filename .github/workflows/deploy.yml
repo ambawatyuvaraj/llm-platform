@@ -34,20 +34,23 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
-      - name: Trivy scan (table — see findings)
-        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8
-        with:
-          scan-type: config
-          scan-ref: charts/
-          severity: HIGH,CRITICAL
-          exit-code: 0
-          format: table
+      - name: Install Helm
+        run: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      - name: Trivy scan (sarif — for GitHub Security tab)
+      - name: Render Helm templates
+        run: |
+          mkdir -p /tmp/rendered
+          helm template vllm charts/vllm/ \
+            --set ingress.host=test.duckdns.org \
+            --set prometheusRule.enabled=false \
+            --set networkPolicy.enabled=false \
+            > /tmp/rendered/manifests.yaml
+
+      - name: Trivy scan rendered manifests
         uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8
         with:
           scan-type: config
-          scan-ref: charts/
+          scan-ref: /tmp/rendered/
           severity: HIGH,CRITICAL
           exit-code: 1
           format: sarif
