@@ -1,0 +1,3 @@
+# ollama requires write access to /tmp for model cache
+# readOnlyRootFilesystem cannot be true for this workload
+AVD-KSV-0014

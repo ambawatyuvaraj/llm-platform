@@ -46,7 +46,16 @@ jobs:
             --set networkPolicy.enabled=false \
             > rendered/manifests.yaml
 
-      - name: Trivy scan rendered manifests
+      - name: Trivy table output (see findings)        ← ADD THIS
+        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8
+        with:
+          scan-type: config
+          scan-ref: rendered/
+          severity: HIGH,CRITICAL
+          exit-code: 0
+          format: table
+
+      - name: Trivy scan (sarif — fails on findings)
         uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8
         with:
           scan-type: config
