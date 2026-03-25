@@ -76,6 +76,10 @@ spec:
           runAsGroup: 1000
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+          capabilities:
+                drop: ["ALL"]
+          seccomProfile:
+                type: RuntimeDefault
       containers:
       - name: vllm
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -89,10 +93,14 @@ spec:
         {{- end }}
         {{- end }}
         securityContext:
+          runAsNonRoot: true
+          runAsUseR: {{ .Values.securityContext.runAsUser }}
           allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
           readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
           capabilities:
-            drop: {{ .Values.securityContext.capabilities.drop | toJson }}
+                 drop: {{ .Values.securityContext.capabilities.drop | toJson }}
+          seccompProfile:
+                type: RuntimeDefault
         ports:
         - containerPort: 11434
           name: http
